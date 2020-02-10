@@ -34,7 +34,7 @@ resultFiles = {
 # key as a string
 def xor(data, key):
 	l = len(key)
-	keyAsInt = map(ord, key)
+	keyAsInt = list(map(ord, key))
 	return bytes(bytearray((
 	    (data[i] ^ keyAsInt[i % l]) for i in range(0,len(data))
 	)))
@@ -42,7 +42,8 @@ def xor(data, key):
 #------------------------------------------------------------------------
 def pad(s):
 	"""PKCS7 padding"""
-	return s + (AES.block_size - len(s) % AES.block_size) * chr(AES.block_size - len(s) % AES.block_size)
+	#         bytearray                str
+	return s + bytes((AES.block_size - len(s) % AES.block_size) * chr(AES.block_size - len(s) % AES.block_size).encode('utf-8'))
 
 #------------------------------------------------------------------------
 def aesEncrypt(clearText, key):
@@ -73,15 +74,15 @@ def convertFromTemplate(parameters, templateFile):
 			f.close()
 			return result
 	except IOError:
-		print color("[!] Could not open or read template file [{}]".format(templateFile))
+		print(color("[!] Could not open or read template file [{}]".format(templateFile)))
 		return None
 
 #------------------------------------------------------------------------
 # data as a bytearray
 def formatCPP(data, key, cipherType):
 	shellcode = "\\x"
-	shellcode += "\\x".join(format(ord(b),'02x') for b in data)
-	result = convertFromTemplate({'shellcode': shellcode, 'key': key, 'cipherType': cipherType}, templates['cpp'])
+	shellcode += "\\x".join(format(b,'02x') for b in data)
+	result = convertFromTemplate({'shellcode': shellcode, 'key': str(key, encoding = "utf-8"), 'cipherType': cipherType}, templates['cpp'])
 
 	if result != None:
 		try:
@@ -89,16 +90,16 @@ def formatCPP(data, key, cipherType):
 			with open(fileName,"w+") as f:
 				f.write(result)
 				f.close()
-				print color("[+] C++ code file saved in [{}]".format(fileName))
+				print(color("[+] C++ code file saved in [{}]".format(fileName)))
 		except IOError:
-			print color("[!] Could not write C++ code  [{}]".format(fileName))
+			print(color("[!] Could not write C++ code  [{}]".format(fileName)))
 
 #------------------------------------------------------------------------
 # data as a bytearray
 def formatCSharp(data, key, cipherType):
 	shellcode = '0x'
-	shellcode += ',0x'.join(format(ord(b),'02x') for b in data)
-	result = convertFromTemplate({'shellcode': shellcode, 'key': key, 'cipherType': cipherType}, templates['csharp'])
+	shellcode += ',0x'.join(format(b,'02x') for b in data)
+	result = convertFromTemplate({'shellcode': shellcode, 'key': str(key, encoding = "utf-8"), 'cipherType': cipherType}, templates['csharp'])
 
 	if result != None:
 		try:
@@ -106,16 +107,16 @@ def formatCSharp(data, key, cipherType):
 			with open(fileName,"w+") as f:
 				f.write(result)
 				f.close()
-				print color("[+] C# code file saved in [{}]".format(fileName))
+				print(color("[+] C# code file saved in [{}]".format(fileName)))
 		except IOError:
-			print color("[!] Could not write C# code  [{}]".format(fileName))
+			print(color("[!] Could not write C# code  [{}]".format(fileName)))
 
 #------------------------------------------------------------------------
 # data as a bytearray
 def formatPy(data, key, cipherType):
 	shellcode = '\\x'
-	shellcode += '\\x'.join(format(ord(b),'02x') for b in data)
-	result = convertFromTemplate({'shellcode': shellcode, 'key': key, 'cipherType': cipherType}, templates['python'])
+	shellcode += '\\x'.join(format(b,'02x') for b in data)
+	result = convertFromTemplate({'shellcode': shellcode, 'key': str(key, encoding = "utf-8"), 'cipherType': cipherType}, templates['python'])
 
 	if result != None:
 		try:
@@ -123,9 +124,9 @@ def formatPy(data, key, cipherType):
 			with open(fileName,"w+") as f:
 				f.write(result)
 				f.close()
-				print color("[+] Python code file saved in [{}]".format(fileName))
+				print(color("[+] Python code file saved in [{}]".format(fileName)))
 		except IOError:
-			print color("[!] Could not write Python code  [{}]".format(fileName))
+			print(color("[!] Could not write Python code  [{}]".format(fileName)))
 
 #------------------------------------------------------------------------
 # data as a bytearray
@@ -192,29 +193,29 @@ if __name__ == '__main__':
 	# Check that required directories and path are available, if not create them
 	if not os.path.isdir("./result"):
 		os.makedirs("./result")
-		print color("[+] Creating [./result] directory for resulting code files")
+		print(color("[+] Creating [./result] directory for resulting code files"))
 
 	#------------------------------------------------------------------------
 	# Open shellcode file and read all bytes from it
 	try:
-		with open(args.shellcodeFile) as shellcodeFileHandle:
+		with open(args.shellcodeFile,"rb") as shellcodeFileHandle:
 			shellcodeBytes = bytearray(shellcodeFileHandle.read())
 			shellcodeFileHandle.close()
-			print color("[*] Shellcode file [{}] successfully loaded".format(args.shellcodeFile))
+			print(color("[*] Shellcode file [{}] successfully loaded".format(args.shellcodeFile)))
 	except IOError:
-		print color("[!] Could not open or read file [{}]".format(args.shellcodeFile))
+		print(color("[!] Could not open or read file [{}]".format(args.shellcodeFile)))
 		quit()
 
-	print color("[*] MD5 hash of the initial shellcode: [{}]".format(MD5.new(shellcodeBytes).hexdigest()))
-	print color("[*] Shellcode size: [{}] bytes".format(len(shellcodeBytes)))
+	print(color("[*] MD5 hash of the initial shellcode: [{}]".format(MD5.new(shellcodeBytes).hexdigest())))
+	print(color("[*] Shellcode size: [{}] bytes".format(len(shellcodeBytes))))
 
 	#------------------------------------------------------------------------
 	# Perform AES128 transformation
 	if args.encryptionType == 'aes':
 		# Derive a 16 bytes (128 bits) master key from the provided key
-		key = pyscrypt.hash(args.key, "saltmegood", 1024, 1, 1, 16)
+		key = pyscrypt.hash(bytes(args.key.encode('utf-8')), bytes("saltmegood".encode('utf-8')), 1024, 1, 1, 16)
 		masterKey = formatB64(key)
-		print color("[*] AES encrypting the shellcode with 128 bits derived key [{}]".format(masterKey))
+		print(color("[*] AES encrypting the shellcode with 128 bits derived key [{}]".format(masterKey)))
 		transformedShellcode = aesEncrypt(shellcodeBytes, key)
 		cipherType = 'aes'
 
@@ -222,33 +223,29 @@ if __name__ == '__main__':
 	# Perform XOR transformation
 	elif args.encryptionType == 'xor':
 		masterKey = args.key
-		print color("[*] XOR encoding the shellcode with key [{}]".format(masterKey))
+		print(color("[*] XOR encoding the shellcode with key [{}]".format(masterKey)))
 		transformedShellcode = xor(shellcodeBytes, masterKey)
 		cipherType = 'xor'
 
 	#------------------------------------------------------------------------
 	# Display interim results
-	print "\n==================================== RESULT ====================================\n"
-	print color("[*] Encrypted shellcode size: [{}] bytes".format(len(transformedShellcode)))
+	print("\n==================================== RESULT ====================================\n")
+	print(color("[*] Encrypted shellcode size: [{}] bytes".format(len(transformedShellcode))))
 	#------------------------------------------------------------------------
 	# Display formated output
 	if args.base64:
-		print color("[*] Transformed shellcode as a base64 encoded string")		
-		print formatB64(transformedShellcode)
-		print ""
+		print(color("[*] Transformed shellcode as a base64 encoded string"))	
+		print(formatB64(transformedShellcode))
 	
 	if args.cplusplus:
-		print color("[*] Generating C++ code file")
+		print(color("[*] Generating C++ code file"))
 		formatCPP(transformedShellcode, masterKey, cipherType)
-		print ""
 		
 
 	if args.csharp:
-		print color("[*] Generating C# code file")
+		print(color("[*] Generating C# code file"))
 		formatCSharp(transformedShellcode, masterKey, cipherType)
-		print ""
 
 	if args.python:
-		print color("[*] Generating Python code file")
+		print(color("[*] Generating Python code file"))
 		formatPy(transformedShellcode, masterKey, cipherType)
-		print ""
