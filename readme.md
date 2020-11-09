@@ -7,6 +7,7 @@ The technique uses two kind of code file:
 1. The shellcode encoder/encrypter: `shellcode_encoder.py`
 2. Various shellcode wrapper, in C++, C#, Binary and Python:
 	- `encryptedShellcodeWrapper.cpp` - supports both XOR and RC4 encryption
+	- `encryptedShellcodeWrapper.go` - supports both XOR and RC4 encryption
 	- `encryptedShellcodeWrapper.cs` - supports both XOR and RC4 encryption
 	- `encryptedShellcodeWrapper.py` - supports both XOR and RC4 encryption
 	- `encryptedShellcodeWrapper.bin` - supports both XOR and RC4 encryption
@@ -32,13 +33,13 @@ Second, run the `shellcode_encoder.py` script along with the desired arguments:
   - raw shellcode filename
   - encryption key
   - encryption type: `xor` or `rc4`
-  - desired output: `base64`, `cpp`, `csharp`, `python`，`binary`
+  - desired output: `base64`, `cpp`, `csharp`, `python`, `binary`, `go`
 
-For instance, to xor encrypt the shellcode with the key '*thisismykey*' and get an output code file in C#, C++, Binary and Python:
+For instance, to xor encrypt the shellcode with the key '*thisismykey*' and get an output code file in C#, C++, Go, Binary and Python:
 ```
-root@kali:~# ./shellcode_encoder.py -cpp -cs -py shellcode.raw thisismykey xor
+root@kali:~# ./shellcode_encoder.py -cpp -cs -py -bin -go shellcode.raw thisismykey xor
 ```
-This will generate C#, C++, Binary and Python code file in the `result` folder. Those files are ready to use/compile.
+This will generate C#, C++, Go, Binary and Python code file in the `result` folder. Those files are ready to use/compile.
 
 Eventually:
 
