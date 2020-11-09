@@ -1,17 +1,15 @@
-Mutlibyte XOR or AES encrypted shellcode - Can run in Python3
+Mutlibyte XOR or RC4 encrypted shellcode - Can run in Python3
 ============
-
-Author: Arno0x0x - [@Arno0x0x](http://twitter.com/Arno0x0x)
-
-These little proof of concept are inspired by this blogpost: [Bypass antivirus with 10 lines of code](http://www.attactics.org/2016/03/bypassing-antivirus-with-10-lines-of.html)
+Modify: Ch1ng
 
 The technique uses two kind of code file:
 
 1. The shellcode encoder/encrypter: `shellcode_encoder.py`
-2. Various shellcode wrapper, in C++, C# and Python:
-	- `encryptedShellcodeWrapper.cpp` - for now supports **only** XOR encryption
-	- `encryptedShellcodeWrapper.cs` - supports both XOR and AES encryption
-	- `encryptedShellcodeWrapper.py` - supports both XOR and AES encryption
+2. Various shellcode wrapper, in C++, C#, Binary and Python:
+	- `encryptedShellcodeWrapper.cpp` - supports both XOR and RC4 encryption
+	- `encryptedShellcodeWrapper.cs` - supports both XOR and RC4 encryption
+	- `encryptedShellcodeWrapper.py` - supports both XOR and RC4 encryption
+	- `encryptedShellcodeWrapper.bin` - supports both XOR and RC4 encryption
 
 Installation
 ----------------------
@@ -33,14 +31,14 @@ In this example, the output is a raw (*unencoded & unencrypted*) reverse_tcp met
 Second, run the `shellcode_encoder.py` script along with the desired arguments:
   - raw shellcode filename
   - encryption key
-  - encryption type: `xor` or `aes`
-  - desired output: `base64`, `cpp`, `csharp`, `python`
+  - encryption type: `xor` or `rc4`
+  - desired output: `base64`, `cpp`, `csharp`, `python`，`binary`
 
-For instance, to xor encrypt the shellcode with the key '*thisismykey*' and get an output code file in C#, C++ and Python:
+For instance, to xor encrypt the shellcode with the key '*thisismykey*' and get an output code file in C#, C++, Binary and Python:
 ```
 root@kali:~# ./shellcode_encoder.py -cpp -cs -py shellcode.raw thisismykey xor
 ```
-This will generate C#, C++ and Python code file in the `result` folder. Those files are ready to use/compile.
+This will generate C#, C++, Binary and Python code file in the `result` folder. Those files are ready to use/compile.
 
 Eventually:
 
