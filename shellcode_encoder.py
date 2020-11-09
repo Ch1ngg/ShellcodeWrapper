@@ -2,27 +2,34 @@
 # -*- coding: utf8 -*-
 #
 # Author: Arno0x0x, Twitter: @Arno0x0x
-#
-
+# Modify: Ch1ng
+# 
+import os
+import struct
+import random
+import string
 import argparse
-from Crypto.Hash import MD5
-from Crypto.Cipher import AES
-import pyscrypt
-from base64 import b64encode
 from os import urandom
 from string import Template
-import os
+
 
 templates = {
 	'cpp': './templates/encryptedShellcodeWrapper.cpp',
 	'csharp': './templates/encryptedShellcodeWrapper.cs',
-	'python': './templates/encryptedShellcodeWrapper.py'
+	'python': './templates/encryptedShellcodeWrapper.py',
+	'golang': './templates/encryptedShellcodeWrapper.go',
 }
 
 resultFiles = {
 	'cpp': './result/encryptedShellcodeWrapper.cpp',
 	'csharp': './result/encryptedShellcodeWrapper.cs',
-	'python': './result/encryptedShellcodeWrapper.py'
+	'python': './result/encryptedShellcodeWrapper.py',
+	'golang': './result/encryptedShellcodeWrapper.go'
+
+}
+resultBinFiles = {
+	'bin' :'./result/encryptpayload.bin'
+
 }
 
 #======================================================================================================
@@ -39,29 +46,28 @@ def xor(data, key):
 	    (data[i] ^ keyAsInt[i % l]) for i in range(0,len(data))
 	)))
 
-#------------------------------------------------------------------------
-def pad(s):
-	"""PKCS7 padding"""
-	#         bytearray                str
-	return s + bytes((AES.block_size - len(s) % AES.block_size) * chr(AES.block_size - len(s) % AES.block_size).encode('utf-8'))
-
-#------------------------------------------------------------------------
-def aesEncrypt(clearText, key):
-	"""Encrypts data with the provided key.
-	The returned byte array is as follow:
-	:==============:==================================================:
-	: IV (16bytes) :    Encrypted (data + PKCS7 padding information)  :
-	:==============:==================================================:
-	"""
-
-	# Generate a crypto secure random Initialization Vector
-	iv = urandom(AES.block_size)
-
-	# Perform PKCS7 padding so that clearText is a multiple of the block size
-	clearText = pad(clearText)
-
-	cipher = AES.new(key, AES.MODE_CBC, iv)
-	return iv + cipher.encrypt(bytes(clearText))
+def rc4(PlainBytes:bytes, KeyBytes:bytes):
+    #keystreamList = []
+    cipherList = []
+ 
+    keyLen = len(KeyBytes)
+    plainLen = len(PlainBytes)
+    S = list(range(256))
+ 
+    j = 0
+    for i in range(256):
+        j = (j + S[i] + KeyBytes[i % keyLen]) % 256
+        S[i], S[j] = S[j], S[i]
+    i = 0
+    j = 0
+    for m in range(plainLen):
+        i = (i + 1) % 256
+        j = (j + S[i]) % 256
+        S[i], S[j] = S[j], S[i]
+        k = S[(S[i] + S[j]) % 256]
+        cipherList.append(k ^ PlainBytes[m])
+    #result_hexstr = ','.join(['%02x' % i for i in cipherList])
+    return bytes(bytearray(cipherList))
 
 #======================================================================================================
 #											OUTPUT FORMAT FUNCTIONS
@@ -77,12 +83,36 @@ def convertFromTemplate(parameters, templateFile):
 		print(color("[!] Could not open or read template file [{}]".format(templateFile)))
 		return None
 
+
+def formatGolang(data, key, cipherType):
+	shellcode = "\\x"
+	shellcode += "\\x".join(format(b,'02x') for b in data)
+	
+	#shellcode += "\\x".join((format(b,'02x')+"\\x01\\x02\\x03") for b in data)
+	#print(shellcode)
+	key2 = "\\x"
+	key2 += "\\x".join(format(b,'02x') for b in bytes(key.encode('utf-8')))
+	result = convertFromTemplate({'shellcode': shellcode, 'key': key2, 'cipherType': cipherType}, templates['golang'])
+
+	if result != None:
+		try:
+			fileName = os.path.splitext(resultFiles['golang'])[0] + "_" + cipherType + os.path.splitext(resultFiles['golang'])[1]
+			with open(fileName,"w+") as f:
+				f.write(result)
+				f.close()
+				print(color("[+] Golang code file saved in [{}]".format(fileName)))
+		except IOError:
+			print(color("[!] Could not write Golang code  [{}]".format(fileName)))
+			
 #------------------------------------------------------------------------
 # data as a bytearray
 def formatCPP(data, key, cipherType):
 	shellcode = "\\x"
 	shellcode += "\\x".join(format(b,'02x') for b in data)
-	result = convertFromTemplate({'shellcode': shellcode, 'key': str(key, encoding = "utf-8"), 'cipherType': cipherType}, templates['cpp'])
+	
+	#shellcode += "\\x".join((format(b,'02x')+"\\x01\\x02\\x03") for b in data)
+	#print(shellcode)
+	result = convertFromTemplate({'shellcode': shellcode, 'key': str(key), 'cipherType': cipherType}, templates['cpp'])
 
 	if result != None:
 		try:
@@ -93,13 +123,13 @@ def formatCPP(data, key, cipherType):
 				print(color("[+] C++ code file saved in [{}]".format(fileName)))
 		except IOError:
 			print(color("[!] Could not write C++ code  [{}]".format(fileName)))
-
+			
 #------------------------------------------------------------------------
 # data as a bytearray
 def formatCSharp(data, key, cipherType):
 	shellcode = '0x'
 	shellcode += ',0x'.join(format(b,'02x') for b in data)
-	result = convertFromTemplate({'shellcode': shellcode, 'key': str(key, encoding = "utf-8"), 'cipherType': cipherType}, templates['csharp'])
+	result = convertFromTemplate({'shellcode': shellcode, 'key': str(key), 'cipherType': cipherType}, templates['csharp'])
 
 	if result != None:
 		try:
@@ -111,12 +141,10 @@ def formatCSharp(data, key, cipherType):
 		except IOError:
 			print(color("[!] Could not write C# code  [{}]".format(fileName)))
 
-#------------------------------------------------------------------------
-# data as a bytearray
 def formatPy(data, key, cipherType):
 	shellcode = '\\x'
 	shellcode += '\\x'.join(format(b,'02x') for b in data)
-	result = convertFromTemplate({'shellcode': shellcode, 'key': str(key, encoding = "utf-8"), 'cipherType': cipherType}, templates['python'])
+	result = convertFromTemplate({'shellcode': shellcode, 'key': str(key), 'cipherType': cipherType}, templates['python'])
 
 	if result != None:
 		try:
@@ -128,16 +156,14 @@ def formatPy(data, key, cipherType):
 		except IOError:
 			print(color("[!] Could not write Python code  [{}]".format(fileName)))
 
-#------------------------------------------------------------------------
-# data as a bytearray
-def formatB64(data):
-	return b64encode(data)
+def formatCPPBinfile(data):
+	fileName = os.path.splitext(resultBinFiles['bin'])[0] + "_" + cipherType + os.path.splitext(resultBinFiles['bin'])[1]
+	with open(fileName,"wb") as fo:
+		for x in data:
+			a = struct.pack('B', x)
+			fo.write(a)
+	print(color("[+] Bin file saved in [{}]".format(fileName)))
 
-#======================================================================================================
-#											HELPERS FUNCTIONS
-#======================================================================================================
-
-#------------------------------------------------------------------------
 def color(string, color=None):
     """
     Author: HarmJ0y, borrowed from Empire
@@ -181,11 +207,11 @@ if __name__ == '__main__':
 	# Parse arguments
 	parser = argparse.ArgumentParser()
 	parser.add_argument("shellcodeFile", help="File name containing the raw shellcode to be encoded/encrypted")
-	parser.add_argument("key", help="Key used to transform (XOR or AES encryption) the shellcode")
-	parser.add_argument("encryptionType", help="Encryption algorithm to apply to the shellcode", choices=['xor','aes'])
-	parser.add_argument("-b64", "--base64", help="Display transformed shellcode as base64 encoded string", action="store_true")
+	parser.add_argument("encryptionType", help="Encryption algorithm to apply to the shellcode", choices=['xor','rc4'])
+	parser.add_argument("-bin", "--binary", help="Generates encrypt binary file", action="store_true")
 	parser.add_argument("-cpp", "--cplusplus", help="Generates C++ file code", action="store_true")
 	parser.add_argument("-cs", "--csharp", help="Generates C# file code", action="store_true")
+	parser.add_argument("-go", "--golang", help="Generates Golang file code", action="store_true")
 	parser.add_argument("-py", "--python", help="Generates Python file code", action="store_true")
 	args = parser.parse_args() 
 
@@ -206,41 +232,32 @@ if __name__ == '__main__':
 		print(color("[!] Could not open or read file [{}]".format(args.shellcodeFile)))
 		quit()
 
-	print(color("[*] MD5 hash of the initial shellcode: [{}]".format(MD5.new(shellcodeBytes).hexdigest())))
 	print(color("[*] Shellcode size: [{}] bytes".format(len(shellcodeBytes))))
 
-	#------------------------------------------------------------------------
-	# Perform AES128 transformation
-	if args.encryptionType == 'aes':
-		# Derive a 16 bytes (128 bits) master key from the provided key
-		key = pyscrypt.hash(bytes(args.key.encode('utf-8')), bytes("saltmegood".encode('utf-8')), 1024, 1, 1, 16)
-		masterKey = formatB64(key)
-		print(color("[*] AES encrypting the shellcode with 128 bits derived key [{}]".format(masterKey)))
-		transformedShellcode = aesEncrypt(shellcodeBytes, key)
-		cipherType = 'aes'
 
 	#------------------------------------------------------------------------
 	# Perform XOR transformation
-	elif args.encryptionType == 'xor':
-		masterKey = args.key
+	if args.encryptionType == 'xor':
+		masterKey = ''.join(random.sample(string.ascii_letters + string.digits, 8))
 		print(color("[*] XOR encoding the shellcode with key [{}]".format(masterKey)))
 		transformedShellcode = xor(shellcodeBytes, masterKey)
 		cipherType = 'xor'
-
+	elif args.encryptionType == 'rc4':
+		masterKey = ''.join(random.sample(string.ascii_letters + string.digits, 8))
+		print(color("[*] RC4 encoding the shellcode with key [{}]".format(masterKey)))
+		transformedShellcode = rc4(shellcodeBytes, bytes(masterKey,encoding="utf-8"))
+		cipherType = 'rc4'
 	#------------------------------------------------------------------------
 	# Display interim results
 	print("\n==================================== RESULT ====================================\n")
 	print(color("[*] Encrypted shellcode size: [{}] bytes".format(len(transformedShellcode))))
 	#------------------------------------------------------------------------
-	# Display formated output
-	if args.base64:
-		print(color("[*] Transformed shellcode as a base64 encoded string"))	
-		print(formatB64(transformedShellcode))
-	
 	if args.cplusplus:
 		print(color("[*] Generating C++ code file"))
 		formatCPP(transformedShellcode, masterKey, cipherType)
-		
+	if args.binary:
+		print(color("[*] Generating encrypt binary file"))
+		formatCPPBinfile(transformedShellcode)
 
 	if args.csharp:
 		print(color("[*] Generating C# code file"))
@@ -249,3 +266,6 @@ if __name__ == '__main__':
 	if args.python:
 		print(color("[*] Generating Python code file"))
 		formatPy(transformedShellcode, masterKey, cipherType)
+	if args.golang:
+		print(color("[*] Generating Python code file"))
+		formatGolang(transformedShellcode, masterKey, cipherType)
