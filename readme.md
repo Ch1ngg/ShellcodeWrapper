@@ -6,8 +6,8 @@ The technique uses two kind of code file:
 
 1. The shellcode encoder/encrypter: `shellcode_encoder.py`
 2. Various shellcode wrapper, in C++, C#, Binary and Python:
-	- `encryptedShellcodeWrapper.cpp` - supports both XOR encryption
-	- `encryptedShellcodeWrapper.go` - supports both XOR encryption
+	- `encryptedShellcodeWrapper.cpp` - only supports XOR encryption
+	- `encryptedShellcodeWrapper.go` - only supports XOR encryption
 	- `encryptedShellcodeWrapper.cs` - supports both XOR and RC4 encryption
 	- `encryptedShellcodeWrapper.py` - supports both XOR and RC4 encryption
 	- `encryptedShellcodeWrapper.bin` - supports both XOR and RC4 encryption
