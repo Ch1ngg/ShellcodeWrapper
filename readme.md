@@ -37,7 +37,7 @@ Second, run the `shellcode_encoder.py` script along with the desired arguments:
 
 For instance, to xor encrypt the shellcode with the key '*thisismykey*' and get an output code file in C#, C++, Go, Binary and Python:
 ```
-root@kali:~# ./shellcode_encoder.py -cpp -cs -py -bin -go shellcode.raw thisismykey xor
+root@kali:~# ./shellcode_encoder.py -cpp -cs -py -bin -go shellcode.raw xor
 ```
 This will generate C#, C++, Go, Binary and Python code file in the `result` folder. Those files are ready to use/compile.
 
